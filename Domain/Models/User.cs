@@ -19,10 +19,12 @@ namespace Domain.Models
         [StringLength(100)]
         public string Email { get; set; }
         [Required]
+        [ForeignKey("Role")] // Asocia UserId con Role
         public int RoleId { get; set; }
 
         public Role Role { get; set; }
 
         public ICollection<Booking> Bookings { get; set; }
+
     }
 }
