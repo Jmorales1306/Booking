@@ -1,0 +1,1 @@
+global using Booking.Core.Entities;
