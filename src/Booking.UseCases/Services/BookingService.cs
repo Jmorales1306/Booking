@@ -69,7 +69,7 @@ namespace Booking.UseCases.Services
                 throw new InvalidOperationException("La fecha de la reserva no puede ser en el pasado.");
             }
 
-            var booking = new Core.Entities.Booking
+            var booking = new Reservation
             {
                 Date = bookingInsertDto.Date,
                 StartTime = bookingInsertDto.StartTime,
