@@ -22,7 +22,7 @@ namespace Booking.UseCases.Services
 
         public async Task<ClientDto> GetById(int id)
         {
-            var client = await _unitOfWork.Clients.GetById(id) ?? throw new KeyNotFoundException($"Cliente con el Id {id} no encontrado");
+            var client = await _unitOfWork.Clients.GetById(id) ?? throw new DomainException($"Cliente con el Id {id} no encontrado", code: "CLIENT_NOT_FOUND");
             return new ClientDto
             {
                 Id = client.Id,
@@ -38,14 +38,14 @@ namespace Booking.UseCases.Services
             var existEmail = await _unitOfWork.Clients.GetByEmail(clientInsertDto.Email);
             if (existEmail != null)
             {
-                throw new InvalidOperationException($"Ya existe un cliente con el correo electrónico '{clientInsertDto.Email}'.");
+                throw new DomainException($"Ya existe un cliente con el correo electrónico '{clientInsertDto.Email}'.", code: "CLIENT_EMAIL_ALREADY_EXISTS");
             }
             if (!string.IsNullOrWhiteSpace(clientInsertDto.PhoneNumber))
             {
                 var existClientByPhone = await _unitOfWork.Clients.GetByPhoneNumber(clientInsertDto.PhoneNumber);
                 if (existClientByPhone != null)
                 {
-                    throw new InvalidOperationException($"Ya existe un cliente con el número de teléfono '{clientInsertDto.PhoneNumber}'.");
+                    throw new DomainException($"Ya existe un cliente con el número de teléfono '{clientInsertDto.PhoneNumber}'.", code: "CLIENT_PHONE_ALREADY_EXISTS");
                 }
             }
 
@@ -80,7 +80,7 @@ namespace Booking.UseCases.Services
             var clientWithSameEmail = await _unitOfWork.Clients.GetByEmail(clientUpdateDto.Email);
             if (clientWithSameEmail != null && clientWithSameEmail.Id != clientUpdateDto.Id)
             {
-                throw new InvalidOperationException($"Ya existe otro cliente con el correo electrónico '{clientUpdateDto.Email}'.");
+                throw new DomainException($"Ya existe otro cliente con el correo electrónico '{clientUpdateDto.Email}'.", code: "CLIENT_EMAIL_ALREADY_EXISTS");
             }
 
             if (!string.IsNullOrWhiteSpace(clientUpdateDto.PhoneNumber))
@@ -88,7 +88,7 @@ namespace Booking.UseCases.Services
                 var clientWithSamePhone = await _unitOfWork.Clients.GetByPhoneNumber(clientUpdateDto.PhoneNumber);
                 if (clientWithSamePhone != null && clientWithSamePhone.Id != clientUpdateDto.Id)
                 {
-                    throw new InvalidOperationException($"Ya existe otro cliente con el número de teléfono '{clientUpdateDto.PhoneNumber}'.");
+                    throw new DomainException($"Ya existe otro cliente con el número de teléfono '{clientUpdateDto.PhoneNumber}'.", code: "CLIENT_PHONE_ALREADY_EXISTS");
                 }
             }
 

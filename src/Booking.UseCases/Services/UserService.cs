@@ -20,7 +20,7 @@ namespace Booking.UseCases.Services
         }
         public async Task<UserDto> GetById(int id)
         {
-            var user = await _unitOfWork.Users.GetById(id) ?? throw new KeyNotFoundException($"Usuario con el Id {id} no encontrado");
+            var user = await _unitOfWork.Users.GetById(id) ?? throw new DomainException($"Usuario con el Id {id} no encontrado", code: "USER_NOT_FOUND");
             return new UserDto
             {
                 Id = user.Id,
@@ -35,7 +35,7 @@ namespace Booking.UseCases.Services
             var existEmail = await _unitOfWork.Users.GetByEmail(userInsertDto.Email);
             if (existEmail != null)
             {
-                throw new InvalidOperationException($"Ya existe un Usuario con el correo electrónico '{userInsertDto.Email}'.");
+                throw new DomainException($"Ya existe un Usuario con el correo electrónico '{userInsertDto.Email}'.", code: "USER_EMAIL_ALREADY_EXISTS");
             }
 
             var user = new Core.Entities.User
@@ -68,7 +68,7 @@ namespace Booking.UseCases.Services
             var usertWithSameEmail = await _unitOfWork.Users.GetByEmail(userUpdateDto.Email);
             if (usertWithSameEmail != null && usertWithSameEmail.Id != userUpdateDto.Id)
             {
-                throw new InvalidOperationException($"Ya existe otro Usuario con el correo electrónico '{userUpdateDto.Email}'.");
+                throw new DomainException($"Ya existe otro Usuario con el correo electrónico '{userUpdateDto.Email}'.", code: "USER_EMAIL_ALREADY_EXISTS");
             }
 
             existUser.FirstName = userUpdateDto.FirstName;

@@ -24,7 +24,7 @@ namespace Booking.UseCases.Services
         public async Task<BookingDto> GetById(int id)
         {
             var booking = await _unitOfWork.Bookings.GetById(id)
-                          ?? throw new KeyNotFoundException($"Reserva con el Id:{id} no encontrada.");
+                          ?? throw new DomainException($"Reserva con el Id:{id} no encontrada.", code: "BOOKING_NOT_FOUND");
 
             return new BookingDto
             {
@@ -44,29 +44,29 @@ namespace Booking.UseCases.Services
             var room = await _unitOfWork.Rooms.GetById(bookingInsertDto.RoomId);
             if (room == null)
             {
-                throw new KeyNotFoundException($"La Sala con el ID '{bookingInsertDto.RoomId}' no existe.");
+                throw new DomainException($"La Sala con el ID '{bookingInsertDto.RoomId}' no existe.", code: "ROOM_NOT_FOUND");
             }
 
             var user = await _unitOfWork.Users.GetById(bookingInsertDto.UserId);
             if (user == null)
             {
-                throw new KeyNotFoundException($"El Usuario con el ID '{bookingInsertDto.UserId}' no existe.");
+                throw new DomainException($"El Usuario con el ID '{bookingInsertDto.UserId}' no existe.", code: "USER_NOT_FOUND");
             }
 
             var client = await _unitOfWork.Clients.GetById(bookingInsertDto.ClientId);
             if (client == null)
             {
-                throw new KeyNotFoundException($"El Cliente con el ID '{bookingInsertDto.ClientId}' no existe.");
+                throw new DomainException($"El Cliente con el ID '{bookingInsertDto.ClientId}' no existe.", code: "CLIENT_NOT_FOUND");
             }
 
             if (bookingInsertDto.StartTime >= bookingInsertDto.EndTime)
             {
-                throw new InvalidOperationException("La hora de inicio debe ser anterior a la hora de fin.");
+                throw new DomainException("La hora de inicio debe ser anterior a la hora de fin.", code: "INVALID_TIME_RANGE");
             }
 
             if (bookingInsertDto.Date.Date < DateTime.Today.Date)
             {
-                throw new InvalidOperationException("La fecha de la reserva no puede ser en el pasado.");
+                throw new DomainException("La fecha de la reserva no puede ser en el pasado.", code: "INVALID_BOOKING_DATE");
             }
 
             var booking = new Reservation
@@ -97,34 +97,34 @@ namespace Booking.UseCases.Services
         public async Task<bool> Update(BookingUpdateDto bookingUpdateDto)
         {
 
-            var existBooking = await _unitOfWork.Bookings.GetById(bookingUpdateDto.Id) ?? throw new KeyNotFoundException($"La Reserva con el ID '{bookingUpdateDto.Id}' no existe para actualizar.");
+            var existBooking = await _unitOfWork.Bookings.GetById(bookingUpdateDto.Id) ?? throw new DomainException($"La Reserva con el ID '{bookingUpdateDto.Id}' no existe para actualizar.", code: "BOOKING_NOT_FOUND");
 
             var room = await _unitOfWork.Rooms.GetById(bookingUpdateDto.RoomId);
             if (room == null)
             {
-                throw new KeyNotFoundException($"La Sala con el ID '{bookingUpdateDto.RoomId}' no existe.");
+                throw new DomainException($"La Sala con el ID '{bookingUpdateDto.RoomId}' no existe.", code: "ROOM_NOT_FOUND");
             }
 
             var user = await _unitOfWork.Users.GetById(bookingUpdateDto.UserId);
             if (user == null)
             {
-                throw new KeyNotFoundException($"El Usuario con el ID '{bookingUpdateDto.UserId}' no existe.");
+                throw new DomainException($"El Usuario con el ID '{bookingUpdateDto.UserId}' no existe.", code: "USER_NOT_FOUND");
             }
 
             var client = await _unitOfWork.Clients.GetById(bookingUpdateDto.ClientId);
             if (client == null)
             {
-                throw new KeyNotFoundException($"El Cliente con el ID '{bookingUpdateDto.ClientId}' no existe.");
+                throw new DomainException($"El Cliente con el ID '{bookingUpdateDto.ClientId}' no existe.", code: "CLIENT_NOT_FOUND");
             }
 
             if (bookingUpdateDto.StartTime >= bookingUpdateDto.EndTime)
             {
-                throw new InvalidOperationException("La hora de inicio debe ser anterior a la hora de fin.");
+                throw new DomainException("La hora de inicio debe ser anterior a la hora de fin.", code: "INVALID_TIME_RANGE");
             }
 
             if (bookingUpdateDto.Date.Date < DateTime.Today.Date)
             {
-                throw new InvalidOperationException("La fecha de la reserva no puede ser en el pasado.");
+                throw new DomainException("La fecha de la reserva no puede ser en el pasado.", code: "INVALID_BOOKING_DATE");
             }
 
             var isRoomAvailable = await _unitOfWork.Bookings.IsRoomAvailableForUpdate(
@@ -137,7 +137,7 @@ namespace Booking.UseCases.Services
 
             if (!isRoomAvailable)
             {
-                throw new InvalidOperationException($"La Sala con ID '{bookingUpdateDto.RoomId}' no está disponible en la fecha y horario especificados debido a otra reserva.");
+                throw new DomainException($"La Sala con ID '{bookingUpdateDto.RoomId}' no está disponible en la fecha y horario especificados debido a otra reserva.", code: "ROOM_NOT_AVAILABLE");
             }
 
             existBooking.Date = bookingUpdateDto.Date;
@@ -157,7 +157,7 @@ namespace Booking.UseCases.Services
             var bookingToDelete = await _unitOfWork.Bookings.GetById(id);
             if (bookingToDelete == null)
             {
-                throw new KeyNotFoundException($"La Reserva con el ID '{id}' no existe para eliminar.");
+                throw new DomainException($"La Reserva con el ID '{id}' no existe para eliminar.", code: "BOOKING_NOT_FOUND");
             }
 
             _unitOfWork.Bookings.Delete(bookingToDelete);
