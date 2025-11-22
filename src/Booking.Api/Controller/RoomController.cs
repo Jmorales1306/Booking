@@ -19,112 +19,89 @@ namespace Booking.Api.Controller
 
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(RoomDTo), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetById(int id)
         {
             var room = await _roomService.GetById(id);
+
             if (room == null)
             {
-                return NotFound(new { message = $"La Sala con el ID:{id} no fue encontado" });
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                    title: "Sala no encontrada",
+                    detail: $"La Sala con el ID:{id} no fue encontrada.");
             }
-            try
-            {
-                return Ok(room);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+
+            return Ok(room);
         }
 
         [HttpPost]
         [ProducesResponseType(typeof(RoomDTo), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Add([FromBody] RoomInsertDto roomInsertDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
-            }
-            try
-            {
-                var room = await _roomService.Add(roomInsertDto);
-                return CreatedAtAction(nameof(GetById), new { id = room.Id }, room);
+                return ValidationProblem(ModelState);
             }
 
-            catch (KeyNotFoundException ex)
-            {
-                return BadRequest(new { message = "Operacion invalida. ", ProblemDetails = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = "Operación inválida. " + ex.Message, ProblemDetails = ex.ToString() });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+            var room = await _roomService.Add(roomInsertDto);
+
+            return CreatedAtAction(nameof(GetById), new { id = room.Id }, room);
         }
 
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Update(int id, [FromBody] RoomUpdateDto roomUpdateDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
+
             if (id != roomUpdateDto.Id)
             {
-                return BadRequest(new { message = "El ID de la ruta no coincide con el ID de la Sala en el cuerpo de la solicitud." });
+                throw new DomainException(
+                    "El ID de la ruta no coincide con el ID de la Sala en el cuerpo de la solicitud.",
+                    code: "ROUTE_BODY_ID_MISMATCH");
+            }
 
-            }
-            try
+            var roomUpdated = await _roomService.Update(roomUpdateDto);
+
+            if (!roomUpdated)
             {
-                var roomUpdate = await _roomService.Update(roomUpdateDto);
-                if (!roomUpdate)
-                {
-                    return BadRequest(new { message = $"No se encontró una Sala con el ID {id} para actualizar." });
-                }
-                return NoContent();
+                throw new DomainException(
+                    $"No se encontró una Sala con el ID {id} para actualizar.",
+                    code: "ROOM_NOT_FOUND");
             }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            var roomDeleted = await _roomService.Delete(id);
+
+            if (!roomDeleted)
             {
-                var roomToDelete = await _roomService.Delete(id);
-                if (!roomToDelete)
-                {
-                    return NotFound(new { message = $"No se encontro una Sala con el ID:{id} para eliminar" });
-                }
-                return NoContent();
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                    title: "Sala no encontrada",
+                    detail: $"No se encontró una Sala con el ID:{id} para eliminar.");
             }
-            catch (InvalidDataException ex)
-            {
-                return BadRequest(new { message = ex });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+
+            return NoContent();
         }
 
     }

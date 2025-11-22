@@ -18,100 +18,108 @@ namespace Booking.Api.Controller
 
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(BookingDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetById(int id)
         {
-            var booking = await _bookingService.GetById(id);
-            if (booking == null)
-            {
-                return NotFound(new { message = $"La reserva con el ID:{id} no fue encontrado " });
-            }
             try
             {
+                var booking = await _bookingService.GetById(id);
                 return Ok(booking);
             }
-            catch (Exception ex)
+            catch (KeyNotFoundException ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                    title: "Reserva no encontrada",
+                    detail: ex.Message);
             }
         }
 
         [HttpPost]
         [ProducesResponseType(typeof(BookingDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Add([FromBody] BookingInsertDto bookingInsertDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
+
             try
             {
                 var booking = await _bookingService.Add(bookingInsertDto);
                 return CreatedAtAction(nameof(GetById), new { id = booking.Id }, booking);
             }
+            catch (KeyNotFoundException ex)
+            {
+                // Sala/Usuario/Cliente relacionados no existen → error de dominio
+                throw new DomainException(
+                    ex.Message,
+                    code: "RELATED_ENTITY_NOT_FOUND");
+            }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { message = "Operacion invalida", ProblemDetails = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
+                // Validaciones de hora/fecha → error de dominio
+                throw new DomainException(
+                    ex.Message,
+                    code: "BOOKING_VALIDATION_ERROR");
             }
         }
 
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Update(int id, [FromBody] BookingUpdateDto bookingUpdateDto)
         {
-
             if (!ModelState.IsValid)
             {
-
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
+
             if (id != bookingUpdateDto.Id)
             {
-
-                return BadRequest(new { message = "El ID de la ruta no coincide con el ID de la reserva en el cuerpo de la solicitud." });
+                throw new DomainException(
+                    "El ID de la ruta no coincide con el ID de la reserva en el cuerpo de la solicitud.",
+                    code: "ROUTE_BODY_ID_MISMATCH");
             }
+
             try
             {
+                var bookingUpdated = await _bookingService.Update(bookingUpdateDto);
 
-                var bookingUpdate = await _bookingService.Update(bookingUpdateDto);
-                if (!bookingUpdate)
+                if (!bookingUpdated)
                 {
-                    return BadRequest(new
-                    {
-                        message = $"No se encontró una Reserva con el ID {id} para actualizar."
-                    });
+                    throw new DomainException(
+                        $"No se encontró una Reserva con el ID {id} para actualizar.",
+                        code: "BOOKING_NOT_FOUND");
                 }
+
                 return NoContent();
             }
             catch (KeyNotFoundException ex)
             {
-                return NotFound(new { message = ex.Message });
+                // IDs relacionados (Room/User/Client) que no existen
+                throw new DomainException(
+                    ex.Message,
+                    code: "RELATED_ENTITY_NOT_FOUND");
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Oops. Ocurrió un error inesperado al procesar la reserva.", ProblemDetails = ex.Message });
+                throw new DomainException(
+                    ex.Message,
+                    code: "BOOKING_VALIDATION_ERROR");
             }
         }
 
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -119,17 +127,22 @@ namespace Booking.Api.Controller
                 var bookingToDelete = await _bookingService.Delete(id);
                 if (!bookingToDelete)
                 {
-                    return NotFound(new { message = $"No se encontro la reservax` con el ID:{id} para eliminar." });
+                    return Problem(
+                        statusCode: StatusCodes.Status404NotFound,
+                        type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                        title: "Reserva no encontrada",
+                        detail: $"No se encontró la reserva con el ID:{id} para eliminar.");
                 }
+
                 return NoContent();
             }
-            catch (InvalidOperationException ex)
+            catch (KeyNotFoundException ex)
             {
-                return BadRequest(new { message = ex });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado.", ProblemDetails = ex.Message });
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                    title: "Reserva no encontrada",
+                    detail: ex.Message);
             }
         }
     }

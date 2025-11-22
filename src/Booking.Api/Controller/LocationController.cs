@@ -1,4 +1,3 @@
-
 using Booking.UseCases.DTOs.Location;
 
 namespace Booking.Api.Controller
@@ -19,114 +18,122 @@ namespace Booking.Api.Controller
 
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(LocationDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetById(int id)
         {
-            var location = await _locationService.GetById(id);
-            if (location == null)
-            {
-                return NotFound(new { message = $"La ubicacion con el ID:{id} no fue encontado" });
-            }
             try
             {
+                var location = await _locationService.GetById(id);
                 return Ok(location);
             }
-            catch (InvalidOperationException ex)
+            catch (KeyNotFoundException ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                    title: "Ubicación no encontrada",
+                    detail: ex.Message);
             }
         }
 
         [HttpPost]
         [ProducesResponseType(typeof(LocationDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Add([FromBody] LocationInsertDto locationInsertDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
+
             try
             {
                 var location = await _locationService.Add(locationInsertDto);
                 return CreatedAtAction(nameof(GetById), new { id = location.Id }, location);
-
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { message = "Operacion invalida. ", ProblemDetails = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
+                throw new DomainException(
+                    ex.Message,
+                    code: "LOCATION_CONFLICT");
             }
         }
 
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Update(int id, [FromBody] LocationUpdateDto locationUpdateDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
+
             if (id != locationUpdateDto.Id)
             {
-                return BadRequest(new { message = "El ID de la ruta no coincide con el ID de la ubicacion en el cuerpo de la solicitud." });
+                throw new DomainException(
+                    "El ID de la ruta no coincide con el ID de la ubicación en el cuerpo de la solicitud.",
+                    code: "ROUTE_BODY_ID_MISMATCH");
             }
+
             try
             {
-                var locationUpdate = await _locationService.Update(locationUpdateDto);
-                if (!locationUpdate)
+                var locationUpdated = await _locationService.Update(locationUpdateDto);
+                if (!locationUpdated)
                 {
-                    return BadRequest(new { message = $"No se encontró una ubicacion con el ID {id} para actualizar." });
+                    throw new DomainException(
+                        $"No se encontró una ubicación con el ID {id} para actualizar.",
+                        code: "LOCATION_NOT_FOUND");
                 }
+
                 return NoContent();
             }
             catch (KeyNotFoundException ex)
             {
-                return BadRequest(new { message = ex });
+                throw new DomainException(
+                    ex.Message,
+                    code: "LOCATION_NOT_FOUND");
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
+                throw new DomainException(
+                    ex.Message,
+                    code: "LOCATION_CONFLICT");
             }
         }
 
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
-                var locationToDelete = await _locationService.Delete(id);
-                if (!locationToDelete)
+                var locationDeleted = await _locationService.Delete(id);
+                if (!locationDeleted)
                 {
-                    return NotFound(new { message = $"No se encontro una ubicacion con el ID:{id} para eliminar" });
+                    return Problem(
+                        statusCode: StatusCodes.Status404NotFound,
+                        type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                        title: "Ubicación no encontrada",
+                        detail: $"No se encontró una ubicación con el ID:{id} para eliminar.");
                 }
+
                 return NoContent();
             }
-            catch (InvalidDataException ex)
+            catch (InvalidOperationException ex)
             {
-                return BadRequest(new { message = ex });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                    title: "Ubicación no encontrada",
+                    detail: ex.Message);
             }
         }
-
     }
 }

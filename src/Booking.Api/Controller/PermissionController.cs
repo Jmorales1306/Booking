@@ -18,35 +18,36 @@ namespace Booking.Api.Controller
 
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(PermissionDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetById(int id)
         {
-            var permission = await _permissionService.GetById(id);
-            if (permission == null)
-            {
-                return NotFound(new { message = $"El Permiso con el ID:{id} no fue encontado" });
-            }
             try
             {
+                var permission = await _permissionService.GetById(id);
                 return Ok(permission);
             }
-            catch (InvalidOperationException ex)
+            catch (KeyNotFoundException ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                    title: "Permiso no encontrado",
+                    detail: ex.Message);
             }
         }
 
         [HttpPost]
         [ProducesResponseType(typeof(PermissionDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Add([FromBody] PermissionInsertDto permissionInsertDTo)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
+
             try
             {
                 var permission = await _permissionService.Add(permissionInsertDTo);
@@ -54,71 +55,80 @@ namespace Booking.Api.Controller
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { message = "Operacion invalida. ", ProblemDetails = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
+                throw new DomainException(
+                    ex.Message,
+                    code: "PERMISSION_CONFLICT");
             }
         }
 
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Update(int id, [FromBody] PermissionUpdateDto permissionUpdateDTo)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
+
             if (id != permissionUpdateDTo.Id)
             {
-                return BadRequest(new { message = "El ID de la ruta no coincide con el ID del Permiso en el cuerpo de la solicitud." });
-
+                throw new DomainException(
+                    "El ID de la ruta no coincide con el ID del Permiso en el cuerpo de la solicitud.",
+                    code: "ROUTE_BODY_ID_MISMATCH");
             }
+
             try
             {
-                var permissionUpdate = await _permissionService.Update(permissionUpdateDTo);
-                if (!permissionUpdate)
+                var permissionUpdated = await _permissionService.Update(permissionUpdateDTo);
+                if (!permissionUpdated)
                 {
-                    return BadRequest(new { message = $"No se encontró un Permiso con el ID {id} para actualizar." });
+                    throw new DomainException(
+                        $"No se encontró un Permiso con el ID {id} para actualizar.",
+                        code: "PERMISSION_NOT_FOUND");
                 }
+
                 return NoContent();
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { message = ex });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
+                // Incluye tanto "no encontrado" como conflictos, según tu servicio actual
+                throw new DomainException(
+                    ex.Message,
+                    code: "PERMISSION_CONFLICT");
             }
         }
 
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
-                var permissionToDelete = await _permissionService.Delete(id);
-                if (!permissionToDelete)
+                var permissionDeleted = await _permissionService.Delete(id);
+                if (!permissionDeleted)
                 {
-                    return NotFound(new { message = $"No se encontro un Permiso con el ID:{id} para eliminar" });
+                    return Problem(
+                        statusCode: StatusCodes.Status404NotFound,
+                        type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                        title: "Permiso no encontrado",
+                        detail: $"No se encontró un Permiso con el ID:{id} para eliminar.");
                 }
+
                 return NoContent();
             }
-            catch (InvalidDataException ex)
+            catch (InvalidOperationException ex)
             {
-                return BadRequest(new { message = ex });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
+                return Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                    title: "Permiso no encontrado",
+                    detail: ex.Message);
             }
         }
-
     }
 }
