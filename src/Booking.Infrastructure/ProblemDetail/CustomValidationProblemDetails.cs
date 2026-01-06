@@ -1,6 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Booking.Infrastructure.ProblemDetail
 {
@@ -10,7 +9,7 @@ namespace Booking.Infrastructure.ProblemDetail
         {
         }
 
-        public CustomValidationProblemDetails(IEnumerable<ValidationError> errors)
+        public CustomValidationProblemDetails(IDictionary<string, string[]> errors)
         {
             Errors = errors;
         }
@@ -24,135 +23,106 @@ namespace Booking.Infrastructure.ProblemDetail
         public new string? Detail { get; set; }
 
         [JsonPropertyName("errors")]
-        public new IEnumerable<ValidationError> Errors { get; } = new List<ValidationError>();
+        public new IDictionary<string, string[]> Errors { get; init; } = new Dictionary<string, string[]>();
 
-        private List<ValidationError> ConvertModelStateErrorsToValidationErrors(ModelStateDictionary modelStateDictionary)
+        private static IDictionary<string, string[]> ConvertModelStateErrorsToValidationErrors(ModelStateDictionary modelState)
         {
-            List<ValidationError> validationErrors = new();
+            var validationErrors = new Dictionary<string, string[]>();
 
-            // Try to capture the body parameter name (e.g. "userInsertDto") so we can build
-            // pointers like "/userInsertDto/lastName" for deserialization errors on key "$".
-            string? bodyPrefix = null;
-            var hasRootDeserializationError = false;
-
-            // Primer recorrido: detectar bodyPrefix y si hay error de deserialización en "$".
-            foreach (var entry in modelStateDictionary)
+            if (modelState.TryGetValue("$", out var rootEntry))
             {
-                var key = entry.Key;
-                var errors = entry.Value.Errors;
-
-                if (errors.Count == 0)
-                {
-                    continue;
-                }
-
-                if (key == "$")
-                {
-                    hasRootDeserializationError = true;
-                    continue;
-                }
-
-                if (string.IsNullOrWhiteSpace(bodyPrefix)
-                    && !string.IsNullOrWhiteSpace(key)
-                    && !key.Contains('.'))
-                {
-                    bodyPrefix = key; // e.g. "userInsertDto"
-                }
-            }
-
-            if (hasRootDeserializationError && modelStateDictionary.TryGetValue("$", out var rootEntry))
-            {
+                var rootErrors = new List<string>();
                 foreach (var error in rootEntry.Errors)
                 {
-                    foreach (var propertyName in ExtractMissingPropertiesFromDeserializationMessage(error.ErrorMessage))
+                    var missingProperties = ExtractMissingPropertiesFromDeserializationMessage(error.ErrorMessage);
+                    foreach (var propertyName in missingProperties)
                     {
-                        var finalPointer = $"/{propertyName}";
+                        validationErrors[propertyName] = [$"The '{propertyName}' field is required."];
+                    }
+                }
+            }
 
-                        validationErrors.Add(new ValidationError
+            string? bodyPrefix = DetectBodyPrefix(modelState);
+
+            foreach (var (key, entry) in modelState)
+            {
+                if (key == "$" || entry.Errors.Count == 0) continue;
+                if (!string.IsNullOrEmpty(bodyPrefix) && key == bodyPrefix) continue;
+
+                string? pointer = GetJsonPointer(key, bodyPrefix);
+                var finalKey = pointer?.TrimStart('/');
+
+                if (!string.IsNullOrEmpty(finalKey))
+                {
+                    if (finalKey.EndsWith("Dto", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var errorsList = new List<string>();
+
+                    foreach (var error in entry.Errors)
+                    {
+                        var errorMessage = error.ErrorMessage;
+
+                        if (errorMessage.Contains("The JSON value could not be converted", StringComparison.OrdinalIgnoreCase) ||
+                            errorMessage.Contains("Could not convert", StringComparison.OrdinalIgnoreCase) ||
+                            errorMessage.Contains("is an invalid", StringComparison.OrdinalIgnoreCase) ||
+                            errorMessage.Contains("Path: $.", StringComparison.OrdinalIgnoreCase))
                         {
-                            Pointer = finalPointer,
-                            Reason = $"The '{propertyName}' field is required."
-                        });
+                            errorMessage = "INVALID_FORMAT";
+                        }
+
+                        errorsList.Add(errorMessage);
                     }
-                }
-            }
 
-
-            bool skipBodyPrefixGenericError = false;
-            if (!string.IsNullOrWhiteSpace(bodyPrefix))
-            {
-                var childPrefix = bodyPrefix + ".";
-                skipBodyPrefixGenericError = modelStateDictionary.Keys.Any(k => k.StartsWith(childPrefix, StringComparison.Ordinal));
-            }
-
-            foreach (var entry in modelStateDictionary)
-            {
-                var key = entry.Key;
-                var errors = entry.Value.Errors;
-
-                if (errors.Count == 0)
-                {
-                    continue;
-                }
-
-                if (key == "$")
-                {
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(bodyPrefix) && key == bodyPrefix)
-                {
-                    continue;
-                }
-
-
-                string? pointer = null;
-                if (!string.IsNullOrWhiteSpace(key))
-                {
-                    var fieldName = key
-                        .Split('.', StringSplitOptions.RemoveEmptyEntries)
-                        .LastOrDefault();
-
-                    if (!string.IsNullOrWhiteSpace(fieldName))
-                    {
-                        pointer = $"/{fieldName}";
-                    }
-                }
-
-                foreach (var error in errors)
-                {
-                    validationErrors.Add(new ValidationError
-                    {
-                        Pointer = pointer,
-                        Reason = error.ErrorMessage
-                    });
+                    validationErrors[finalKey] = errorsList.ToArray();
                 }
             }
 
             return validationErrors;
         }
 
+        private static string? DetectBodyPrefix(ModelStateDictionary modelState)
+        {
+            foreach (var key in modelState.Keys)
+            {
+                if (key == "$" || key.Contains('.')) continue;
+
+                var possiblePrefix = key + ".";
+                if (modelState.Keys.Any(k => k.StartsWith(possiblePrefix, StringComparison.Ordinal)))
+                {
+                    return key;
+                }
+            }
+            return null;
+        }
+
+        private static string? GetJsonPointer(string key, string? prefixToRemove)
+        {
+            if (string.IsNullOrWhiteSpace(key)) return null;
+
+            if (!string.IsNullOrEmpty(prefixToRemove) && key.StartsWith(prefixToRemove + ".", StringComparison.Ordinal))
+            {
+                key = key[(prefixToRemove.Length + 1)..];
+            }
+
+            var fieldName = key.Split('.', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+            return string.IsNullOrWhiteSpace(fieldName) ? null : $"/{fieldName}";
+        }
+
         private static IEnumerable<string> ExtractMissingPropertiesFromDeserializationMessage(string? message)
         {
-            if (string.IsNullOrWhiteSpace(message))
-            {
-                yield break;
-            }
+            if (string.IsNullOrWhiteSpace(message)) yield break;
 
             const string marker = "including the following:";
             var index = message.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-            if (index < 0)
-            {
-                yield break;
-            }
 
-            var listPart = message[(index + marker.Length)..].Trim();
-            if (string.IsNullOrWhiteSpace(listPart))
-            {
-                yield break;
-            }
+            if (index < 0) yield break;
 
+            var listPart = message[(index + marker.Length)..];
             var parts = listPart.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
             foreach (var part in parts)
             {
                 var name = part.Trim('\'', '"');

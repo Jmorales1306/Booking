@@ -1,7 +1,7 @@
-using Booking.Infrastructure.ProblemDetail;
-using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
+using Booking.Infrastructure.ProblemDetail;
+using Microsoft.Extensions.Logging;
 
 namespace Booking.Infrastructure.Middlewares
 {
@@ -34,22 +34,21 @@ namespace Booking.Infrastructure.Middlewares
 
             if (ex is DomainException e)
             {
-                var problemDetails = new CustomValidationProblemDetails(new List<ValidationError>
-                    {
-                        new()
-                        {
-                            Code = e.Code,
-                            Reason = e.Message
-                        }
-                    })
+                bool isNotFound = e.Code?.Contains("NOT_FOUND", StringComparison.OrdinalIgnoreCase) == true;
+                int statusCode = isNotFound ? (int)HttpStatusCode.NotFound : (int)HttpStatusCode.BadRequest;
+
+                var problemDetails = new CustomValidationProblemDetails(new Dictionary<string, string[]>
                 {
-                    Type = "https://example.com/problems/validation-error",
-                    Title = "One or more validation errors occurred.",
-                    Detail = "One or more domain validation errors occurred.",
-                    Status = (int)HttpStatusCode.BadRequest,
+                    { e.Target ?? "domain", [e.Code ?? "DOMAIN_ERROR"] }
+                })
+                {
+                    Type = isNotFound ? "https://tools.ietf.org/html/rfc7231#section-6.5.4" : "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                    Title = isNotFound ? "Not Found" : "One or more validation errors occurred.",
+                    Detail = isNotFound ? "The requested resource was not found." : "One or more domain validation errors occurred.",
+                    Status = statusCode,
                     Instance = context.Request.Path,
                 };
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                context.Response.StatusCode = statusCode;
                 result = JsonSerializer.Serialize(problemDetails);
             }
             else
