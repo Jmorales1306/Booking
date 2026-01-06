@@ -22,19 +22,8 @@ namespace Booking.Api.Controller
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetById(int id)
         {
-            try
-            {
-                var permission = await _permissionService.GetById(id);
-                return Ok(permission);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Permiso no encontrado",
-                    detail: ex.Message);
-            }
+            var permission = await _permissionService.GetById(id);
+            return Ok(permission);
         }
 
         [HttpPost]
@@ -48,17 +37,8 @@ namespace Booking.Api.Controller
                 return ValidationProblem(ModelState);
             }
 
-            try
-            {
-                var permission = await _permissionService.Add(permissionInsertDTo);
-                return CreatedAtAction(nameof(GetById), new { id = permission.Id }, permission);
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new DomainException(
-                    ex.Message,
-                    code: "PERMISSION_CONFLICT");
-            }
+            var permission = await _permissionService.Add(permissionInsertDTo);
+            return CreatedAtAction(nameof(GetById), new { id = permission.Id }, permission);
         }
 
         [HttpPut("{id}")]
@@ -76,29 +56,19 @@ namespace Booking.Api.Controller
             if (id != permissionUpdateDTo.Id)
             {
                 throw new DomainException(
-                    "El ID de la ruta no coincide con el ID del Permiso en el cuerpo de la solicitud.",
-                    code: "ROUTE_BODY_ID_MISMATCH");
+                    "ROUTE_BODY_ID_MISMATCH",
+                    target: "id");
             }
 
-            try
+            var permissionUpdated = await _permissionService.Update(permissionUpdateDTo);
+            if (!permissionUpdated)
             {
-                var permissionUpdated = await _permissionService.Update(permissionUpdateDTo);
-                if (!permissionUpdated)
-                {
-                    throw new DomainException(
-                        $"No se encontró un Permiso con el ID {id} para actualizar.",
-                        code: "PERMISSION_NOT_FOUND");
-                }
-
-                return NoContent();
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Incluye tanto "no encontrado" como conflictos, según tu servicio actual
                 throw new DomainException(
-                    ex.Message,
-                    code: "PERMISSION_CONFLICT");
+                    "PERMISSION_NOT_FOUND",
+                    target: "id");
             }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
@@ -107,28 +77,15 @@ namespace Booking.Api.Controller
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            var permissionDeleted = await _permissionService.Delete(id);
+            if (!permissionDeleted)
             {
-                var permissionDeleted = await _permissionService.Delete(id);
-                if (!permissionDeleted)
-                {
-                    return Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                        title: "Permiso no encontrado",
-                        detail: $"No se encontró un Permiso con el ID:{id} para eliminar.");
-                }
+                throw new DomainException(
+                    "PERMISSION_NOT_FOUND",
+                    target: "id");
+            }
 
-                return NoContent();
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Permiso no encontrado",
-                    detail: ex.Message);
-            }
+            return NoContent();
         }
     }
 }

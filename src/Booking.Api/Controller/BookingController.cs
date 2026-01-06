@@ -22,19 +22,8 @@ namespace Booking.Api.Controller
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetById(int id)
         {
-            try
-            {
-                var booking = await _bookingService.GetById(id);
-                return Ok(booking);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Reserva no encontrada",
-                    detail: ex.Message);
-            }
+            var booking = await _bookingService.GetById(id);
+            return Ok(booking);
         }
 
         [HttpPost]
@@ -48,25 +37,8 @@ namespace Booking.Api.Controller
                 return ValidationProblem(ModelState);
             }
 
-            try
-            {
-                var booking = await _bookingService.Add(bookingInsertDto);
-                return CreatedAtAction(nameof(GetById), new { id = booking.Id }, booking);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                // Sala/Usuario/Cliente relacionados no existen → error de dominio
-                throw new DomainException(
-                    ex.Message,
-                    code: "RELATED_ENTITY_NOT_FOUND");
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Validaciones de hora/fecha → error de dominio
-                throw new DomainException(
-                    ex.Message,
-                    code: "BOOKING_VALIDATION_ERROR");
-            }
+            var booking = await _bookingService.Add(bookingInsertDto);
+            return CreatedAtAction(nameof(GetById), new { id = booking.Id }, booking);
         }
 
         [HttpPut("{id}")]
@@ -84,36 +56,20 @@ namespace Booking.Api.Controller
             if (id != bookingUpdateDto.Id)
             {
                 throw new DomainException(
-                    "El ID de la ruta no coincide con el ID de la reserva en el cuerpo de la solicitud.",
-                    code: "ROUTE_BODY_ID_MISMATCH");
+                    "ROUTE_BODY_ID_MISMATCH",
+                    target: "id");
             }
 
-            try
-            {
-                var bookingUpdated = await _bookingService.Update(bookingUpdateDto);
+            var bookingUpdated = await _bookingService.Update(bookingUpdateDto);
 
-                if (!bookingUpdated)
-                {
-                    throw new DomainException(
-                        $"No se encontró una Reserva con el ID {id} para actualizar.",
-                        code: "BOOKING_NOT_FOUND");
-                }
-
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                // IDs relacionados (Room/User/Client) que no existen
-                throw new DomainException(
-                    ex.Message,
-                    code: "RELATED_ENTITY_NOT_FOUND");
-            }
-            catch (InvalidOperationException ex)
+            if (!bookingUpdated)
             {
                 throw new DomainException(
-                    ex.Message,
-                    code: "BOOKING_VALIDATION_ERROR");
+                    "BOOKING_NOT_FOUND",
+                    target: "id");
             }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
@@ -122,28 +78,15 @@ namespace Booking.Api.Controller
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            var bookingToDelete = await _bookingService.Delete(id);
+            if (!bookingToDelete)
             {
-                var bookingToDelete = await _bookingService.Delete(id);
-                if (!bookingToDelete)
-                {
-                    return Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                        title: "Reserva no encontrada",
-                        detail: $"No se encontró la reserva con el ID:{id} para eliminar.");
-                }
+                throw new DomainException(
+                    "BOOKING_NOT_FOUND",
+                    target: "id");
+            }
 
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Reserva no encontrada",
-                    detail: ex.Message);
-            }
+            return NoContent();
         }
     }
 }

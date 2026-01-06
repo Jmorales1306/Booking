@@ -24,16 +24,6 @@ namespace Booking.Api.Controller
         public async Task<IActionResult> GetById(int id)
         {
             var room = await _roomService.GetById(id);
-
-            if (room == null)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Sala no encontrada",
-                    detail: $"La Sala con el ID:{id} no fue encontrada.");
-            }
-
             return Ok(room);
         }
 
@@ -68,8 +58,8 @@ namespace Booking.Api.Controller
             if (id != roomUpdateDto.Id)
             {
                 throw new DomainException(
-                    "El ID de la ruta no coincide con el ID de la Sala en el cuerpo de la solicitud.",
-                    code: "ROUTE_BODY_ID_MISMATCH");
+                    "ROUTE_BODY_ID_MISMATCH",
+                    target: "id");
             }
 
             var roomUpdated = await _roomService.Update(roomUpdateDto);
@@ -77,8 +67,8 @@ namespace Booking.Api.Controller
             if (!roomUpdated)
             {
                 throw new DomainException(
-                    $"No se encontró una Sala con el ID {id} para actualizar.",
-                    code: "ROOM_NOT_FOUND");
+                    "ROOM_NOT_FOUND",
+                    target: "id");
             }
 
             return NoContent();
@@ -94,11 +84,9 @@ namespace Booking.Api.Controller
 
             if (!roomDeleted)
             {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Sala no encontrada",
-                    detail: $"No se encontró una Sala con el ID:{id} para eliminar.");
+                throw new DomainException(
+                    "ROOM_NOT_FOUND",
+                    target: "id");
             }
 
             return NoContent();

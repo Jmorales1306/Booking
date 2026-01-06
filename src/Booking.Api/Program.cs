@@ -72,9 +72,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Global middleware for handling exceptions 
-app.UseMiddleware<ApiExceptionHandlingMiddleware>();
-
 app.UseRouting();
 
 // Converts unhandled exceptions into Problem Details responses
@@ -82,6 +79,9 @@ app.UseExceptionHandler();
 
 // Returns the Problem Details response for (empty) non-successful responses
 app.UseStatusCodePages();
+
+// Global middleware for handling exceptions
+app.UseMiddleware<ApiExceptionHandlingMiddleware>();
 
 app.UseAuthorization();
 

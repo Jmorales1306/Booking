@@ -22,19 +22,8 @@ namespace Booking.Api.Controller
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetById(int id)
         {
-            try
-            {
-                var client = await _clientService.GetById(id);
-                return Ok(client);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Cliente no encontrado",
-                    detail: ex.Message);
-            }
+            var client = await _clientService.GetById(id);
+            return Ok(client);
         }
 
         [HttpPost]
@@ -48,17 +37,8 @@ namespace Booking.Api.Controller
                 return ValidationProblem(ModelState);
             }
 
-            try
-            {
-                var client = await _clientService.Add(clientInsertDto);
-                return CreatedAtAction(nameof(GetById), new { id = client.Id }, client);
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new DomainException(
-                    ex.Message,
-                    code: "CLIENT_CONFLICT");
-            }
+            var client = await _clientService.Add(clientInsertDto);
+            return CreatedAtAction(nameof(GetById), new { id = client.Id }, client);
         }
 
         [HttpPut("{id}")]
@@ -76,28 +56,19 @@ namespace Booking.Api.Controller
             if (id != clientUpdateDto.Id)
             {
                 throw new DomainException(
-                    "El ID de la ruta no coincide con el ID del cliente en el cuerpo de la solicitud.",
-                    code: "ROUTE_BODY_ID_MISMATCH");
+                    "ROUTE_BODY_ID_MISMATCH",
+                    target: "id");
             }
 
-            try
-            {
-                var clientUpdated = await _clientService.Update(clientUpdateDto);
-                if (!clientUpdated)
-                {
-                    throw new DomainException(
-                        $"No se encontró un cliente con el ID {id} para actualizar.",
-                        code: "CLIENT_NOT_FOUND");
-                }
-
-                return NoContent();
-            }
-            catch (InvalidOperationException ex)
+            var clientUpdated = await _clientService.Update(clientUpdateDto);
+            if (!clientUpdated)
             {
                 throw new DomainException(
-                    ex.Message,
-                    code: "CLIENT_CONFLICT");
+                    "CLIENT_NOT_FOUND",
+                    target: "id");
             }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
@@ -109,11 +80,9 @@ namespace Booking.Api.Controller
             var clientDeleted = await _clientService.Delete(id);
             if (!clientDeleted)
             {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Cliente no encontrado",
-                    detail: $"No se encontró un cliente con el ID:{id} para eliminar.");
+                throw new DomainException(
+                    "CLIENT_NOT_FOUND",
+                    target: "id");
             }
 
             return NoContent();

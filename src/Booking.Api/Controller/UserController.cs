@@ -1,3 +1,4 @@
+using Booking.Infrastructure.ProblemDetail;
 using Booking.UseCases.DTOs.User;
 
 namespace Booking.Api.Controller
@@ -24,15 +25,6 @@ namespace Booking.Api.Controller
         {
             var user = await _userService.GetById(id);
 
-            if (user is null)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Usuario no encontrado",
-                    detail: $"El Usuario con el ID:{id} no fue encontrado.");
-            }
-
             return Ok(user);
         }
 
@@ -47,7 +39,6 @@ namespace Booking.Api.Controller
             }
 
             var user = await _userService.Add(userInsertDto);
-
             return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
         }
 
@@ -67,8 +58,8 @@ namespace Booking.Api.Controller
             if (id != userUpdateDto.Id)
             {
                 throw new DomainException(
-                    "El ID de la ruta no coincide con el ID del Usuario en el cuerpo de la solicitud.",
-                    code: "ROUTE_BODY_ID_MISMATCH");
+                    "ROUTE_BODY_ID_MISMATCH",
+                    target: "id");
             }
 
             var userUpdated = await _userService.Update(userUpdateDto);
@@ -76,8 +67,8 @@ namespace Booking.Api.Controller
             if (!userUpdated)
             {
                 throw new DomainException(
-                    $"No se encontró un Usuario con el ID {id} para actualizar.",
-                    code: "USER_NOT_FOUND");
+                    "USER_NOT_FOUND",
+                    target: "id");
             }
 
             return NoContent();
@@ -93,11 +84,9 @@ namespace Booking.Api.Controller
 
             if (!userDeleted)
             {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Usuario no encontrado",
-                    detail: $"No se encontro un Usuario con el ID:{id} para eliminar.");
+                throw new DomainException(
+                    "USER_NOT_FOUND",
+                    target: "id");
             }
 
             return NoContent();

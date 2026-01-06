@@ -22,19 +22,8 @@ namespace Booking.Api.Controller
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetById(int id)
         {
-            try
-            {
-                var location = await _locationService.GetById(id);
-                return Ok(location);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Ubicación no encontrada",
-                    detail: ex.Message);
-            }
+            var location = await _locationService.GetById(id);
+            return Ok(location);
         }
 
         [HttpPost]
@@ -48,17 +37,8 @@ namespace Booking.Api.Controller
                 return ValidationProblem(ModelState);
             }
 
-            try
-            {
-                var location = await _locationService.Add(locationInsertDto);
-                return CreatedAtAction(nameof(GetById), new { id = location.Id }, location);
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new DomainException(
-                    ex.Message,
-                    code: "LOCATION_CONFLICT");
-            }
+            var location = await _locationService.Add(locationInsertDto);
+            return CreatedAtAction(nameof(GetById), new { id = location.Id }, location);
         }
 
         [HttpPut("{id}")]
@@ -76,34 +56,19 @@ namespace Booking.Api.Controller
             if (id != locationUpdateDto.Id)
             {
                 throw new DomainException(
-                    "El ID de la ruta no coincide con el ID de la ubicación en el cuerpo de la solicitud.",
-                    code: "ROUTE_BODY_ID_MISMATCH");
+                    "ROUTE_BODY_ID_MISMATCH",
+                    target: "id");
             }
 
-            try
+            var locationUpdated = await _locationService.Update(locationUpdateDto);
+            if (!locationUpdated)
             {
-                var locationUpdated = await _locationService.Update(locationUpdateDto);
-                if (!locationUpdated)
-                {
-                    throw new DomainException(
-                        $"No se encontró una ubicación con el ID {id} para actualizar.",
-                        code: "LOCATION_NOT_FOUND");
-                }
+                throw new DomainException(
+                    "LOCATION_NOT_FOUND",
+                    target: "id");
+            }
 
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                throw new DomainException(
-                    ex.Message,
-                    code: "LOCATION_NOT_FOUND");
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new DomainException(
-                    ex.Message,
-                    code: "LOCATION_CONFLICT");
-            }
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
@@ -112,28 +77,15 @@ namespace Booking.Api.Controller
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            var locationDeleted = await _locationService.Delete(id);
+            if (!locationDeleted)
             {
-                var locationDeleted = await _locationService.Delete(id);
-                if (!locationDeleted)
-                {
-                    return Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                        title: "Ubicación no encontrada",
-                        detail: $"No se encontró una ubicación con el ID:{id} para eliminar.");
-                }
+                throw new DomainException(
+                    "LOCATION_NOT_FOUND",
+                    target: "id");
+            }
 
-                return NoContent();
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Ubicación no encontrada",
-                    detail: ex.Message);
-            }
+            return NoContent();
         }
     }
 }

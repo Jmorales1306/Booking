@@ -22,19 +22,8 @@ namespace Booking.Api.Controller
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetById(int id)
         {
-            try
-            {
-                var role = await _roleService.GetById(id);
-                return Ok(role);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Rol no encontrado",
-                    detail: ex.Message);
-            }
+            var role = await _roleService.GetById(id);
+            return Ok(role);
         }
 
         [HttpPost]
@@ -48,17 +37,8 @@ namespace Booking.Api.Controller
                 return ValidationProblem(ModelState);
             }
 
-            try
-            {
-                var role = await _roleService.Add(roleInsertDto);
-                return CreatedAtAction(nameof(GetById), new { id = role.Id }, role);
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new DomainException(
-                    ex.Message,
-                    code: "ROLE_CONFLICT");
-            }
+            var role = await _roleService.Add(roleInsertDto);
+            return CreatedAtAction(nameof(GetById), new { id = role.Id }, role);
         }
 
         [HttpPut("{id}")]
@@ -76,28 +56,19 @@ namespace Booking.Api.Controller
             if (id != roleUpdateDto.Id)
             {
                 throw new DomainException(
-                    "El ID de la ruta no coincide con el ID del Rol en el cuerpo de la solicitud.",
-                    code: "ROUTE_BODY_ID_MISMATCH");
+                    "ROUTE_BODY_ID_MISMATCH",
+                    target: "id");
             }
 
-            try
-            {
-                var roleUpdated = await _roleService.Update(roleUpdateDto);
-                if (!roleUpdated)
-                {
-                    throw new DomainException(
-                        $"No se encontró un Rol con el ID {id} para actualizar.",
-                        code: "ROLE_NOT_FOUND");
-                }
-
-                return NoContent();
-            }
-            catch (InvalidOperationException ex)
+            var roleUpdated = await _roleService.Update(roleUpdateDto);
+            if (!roleUpdated)
             {
                 throw new DomainException(
-                    ex.Message,
-                    code: "ROLE_CONFLICT");
+                    "ROLE_NOT_FOUND",
+                    target: "id");
             }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
@@ -106,28 +77,15 @@ namespace Booking.Api.Controller
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            var roleDeleted = await _roleService.Delete(id);
+            if (!roleDeleted)
             {
-                var roleDeleted = await _roleService.Delete(id);
-                if (!roleDeleted)
-                {
-                    return Problem(
-                        statusCode: StatusCodes.Status404NotFound,
-                        type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                        title: "Rol no encontrado",
-                        detail: $"No se encontró un Rol con el ID:{id} para eliminar.");
-                }
+                throw new DomainException(
+                    "ROLE_NOT_FOUND",
+                    target: "id");
+            }
 
-                return NoContent();
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    type: "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-                    title: "Rol no encontrado",
-                    detail: ex.Message);
-            }
+            return NoContent();
         }
     }
 }
