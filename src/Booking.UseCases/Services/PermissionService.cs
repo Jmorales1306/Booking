@@ -22,7 +22,7 @@ namespace Booking.UseCases.Services
 
         public async Task<PermissionDto> GetById(int id)
         {
-            var permission = await _unitOfWork.Permissions.GetById(id) ?? throw new DomainException($"Permiso con el id {id} no encontrado.", code: "PERMISSION_NOT_FOUND");
+            var permission = await _unitOfWork.Permissions.GetById(id) ?? throw new DomainException("PERMISSION_NOT_FOUND");
             return new PermissionDto
             {
                 Id = permission.Id,
@@ -36,7 +36,9 @@ namespace Booking.UseCases.Services
             var existPermision = await _unitOfWork.Permissions.GetByName(permissionInsertDTo.Name);
             if (existPermision != null)
             {
-                throw new DomainException($"Ya existe un Permiso con el nombre {permissionInsertDTo.Name}.", code: "PERMISSION_NAME_ALREADY_EXISTS");
+                throw new DomainException(
+                    "PERMISSION_NAME_ALREADY_EXISTS",
+                    target: "name");
             }
 
             var permission = new Core.Entities.Permission
@@ -59,7 +61,7 @@ namespace Booking.UseCases.Services
 
         public async Task<bool> Update(PermissionUpdateDto permissionUpdateDTo)
         {
-            var existPermision = await _unitOfWork.Permissions.GetById(permissionUpdateDTo.Id) ?? throw new DomainException($"No se encontro el Permiso con el Id:{permissionUpdateDTo.Id}.", code: "PERMISSION_NOT_FOUND");
+            var existPermision = await _unitOfWork.Permissions.GetById(permissionUpdateDTo.Id) ?? throw new DomainException("PERMISSION_NOT_FOUND");
 
             existPermision.Name = permissionUpdateDTo.Name;
             existPermision.Description = permissionUpdateDTo.Description;
@@ -71,7 +73,7 @@ namespace Booking.UseCases.Services
 
         public async Task<bool> Delete(int id)
         {
-            var permissionToDelete = await _unitOfWork.Permissions.GetById(id) ?? throw new DomainException($"No se encontro el Permiso con el Id:{id}.", code: "PERMISSION_NOT_FOUND");
+            var permissionToDelete = await _unitOfWork.Permissions.GetById(id) ?? throw new DomainException("PERMISSION_NOT_FOUND");
 
             _unitOfWork.Permissions.Delete(permissionToDelete);
             var rowsAffected = await _unitOfWork.Complete();

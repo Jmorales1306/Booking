@@ -20,7 +20,7 @@ namespace Booking.UseCases.Services
 
         public async Task<LocationDto> GetById(int id)
         {
-            var location = await _unitOfWork.Locations.GetById(id) ?? throw new DomainException($"Ubication con el Id {id} no encontrado", code: "LOCATION_NOT_FOUND");
+            var location = await _unitOfWork.Locations.GetById(id) ?? throw new DomainException("LOCATION_NOT_FOUND");
             return new LocationDto
             {
                 Id = location.Id,
@@ -35,7 +35,9 @@ namespace Booking.UseCases.Services
             var existLocation = await _unitOfWork.Locations.GetByName(locationInsertDto.Name);
             if (existLocation != null)
             {
-                throw new DomainException($"Ya existe una ubicacion con el nombre {locationInsertDto.Name}.", code: "LOCATION_NAME_ALREADY_EXISTS");
+                throw new DomainException(
+                    "LOCATION_NAME_ALREADY_EXISTS",
+                    target: "name");
             }
             var location = new Core.Entities.Location
             {
@@ -62,7 +64,7 @@ namespace Booking.UseCases.Services
 
             if (existLocation == null)
             {
-                throw new DomainException($"No se encontró una ubicación con el ID '{locationUpdateDto.Id}'.", code: "LOCATION_NOT_FOUND");
+                throw new DomainException("LOCATION_NOT_FOUND");
             }
 
             existLocation.Name = locationUpdateDto.Name;
@@ -77,7 +79,7 @@ namespace Booking.UseCases.Services
 
         public async Task<bool> Delete(int id)
         {
-            var locationToDelete = await _unitOfWork.Locations.GetById(id) ?? throw new DomainException($"No se encontro una ubicacion con el Id:{id}.", code: "LOCATION_NOT_FOUND");
+            var locationToDelete = await _unitOfWork.Locations.GetById(id) ?? throw new DomainException("LOCATION_NOT_FOUND");
 
             _unitOfWork.Locations.Delete(locationToDelete);
             var rowsAffected = await _unitOfWork.Complete();

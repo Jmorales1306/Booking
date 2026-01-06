@@ -23,7 +23,7 @@ namespace Booking.UseCases.Services
             var room = await _unitOfWork.Rooms.GetById(id);
             if (room is null)
             {
-                return null;
+                throw new DomainException("ROOM_NOT_FOUND");
             }
 
             return new RoomDTo
@@ -41,16 +41,16 @@ namespace Booking.UseCases.Services
             if (existRoom != null)
             {
                 throw new DomainException(
-                    $"Ya existe una Sala con el nombre '{roomInsertDto.Name}'.",
-                    code: "ROOM_NAME_ALREADY_EXISTS");
+                    "ROOM_NAME_ALREADY_EXISTS",
+                    target: "name");
             }
 
             var existingLocation = await _unitOfWork.Locations.GetById(roomInsertDto.LocatonId);
             if (existingLocation == null)
             {
                 throw new DomainException(
-                    $"La Ubicación con el ID '{roomInsertDto.LocatonId}' no existe.",
-                    code: "LOCATION_NOT_FOUND");
+                    "LOCATION_NOT_FOUND",
+                    target: "locationId");
             }
 
             var room = new Core.Entities.Room

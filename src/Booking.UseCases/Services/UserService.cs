@@ -18,9 +18,10 @@ namespace Booking.UseCases.Services
                 RoleId = u.RoleId
             })];
         }
+
         public async Task<UserDto> GetById(int id)
         {
-            var user = await _unitOfWork.Users.GetById(id) ?? throw new DomainException($"Usuario con el Id {id} no encontrado", code: "USER_NOT_FOUND");
+            var user = await _unitOfWork.Users.GetById(id) ?? throw new DomainException("USER_NOT_FOUND");
             return new UserDto
             {
                 Id = user.Id,
@@ -30,12 +31,15 @@ namespace Booking.UseCases.Services
                 RoleId = user.RoleId
             };
         }
+
         public async Task<UserDto> Add(UserInsertDto userInsertDto)
         {
             var existEmail = await _unitOfWork.Users.GetByEmail(userInsertDto.Email);
             if (existEmail != null)
             {
-                throw new DomainException($"Ya existe un Usuario con el correo electrónico '{userInsertDto.Email}'.", code: "USER_EMAIL_ALREADY_EXISTS");
+                throw new DomainException(
+                    "USER_EMAIL_ALREADY_EXISTS",
+                    target: "email");
             }
 
             var user = new Core.Entities.User
@@ -58,6 +62,7 @@ namespace Booking.UseCases.Services
                 RoleId = user.RoleId
             };
         }
+
         public async Task<bool> Update(UserUpdateDto userUpdateDto)
         {
             var existUser = await _unitOfWork.Users.GetById(userUpdateDto.Id);
@@ -68,7 +73,9 @@ namespace Booking.UseCases.Services
             var usertWithSameEmail = await _unitOfWork.Users.GetByEmail(userUpdateDto.Email);
             if (usertWithSameEmail != null && usertWithSameEmail.Id != userUpdateDto.Id)
             {
-                throw new DomainException($"Ya existe otro Usuario con el correo electrónico '{userUpdateDto.Email}'.", code: "USER_EMAIL_ALREADY_EXISTS");
+                throw new DomainException(
+                    "USER_EMAIL_ALREADY_EXISTS",
+                    target: "email");
             }
 
             existUser.FirstName = userUpdateDto.FirstName;
