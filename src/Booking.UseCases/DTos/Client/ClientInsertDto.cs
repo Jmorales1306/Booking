@@ -2,19 +2,17 @@
 {
     public class ClientInsertDto
     {
-        [Required]
-        [StringLength(50, ErrorMessage = "El nombre no puede sobrepasar los 50 caracteres")]
+        [Required(ErrorMessage = "REQUIRED")]
+        [StringLength(50, ErrorMessage = "INVALID_LENGTH")]
         public required string FirstName { get; set; }
-        [Required]
-        [StringLength(50, ErrorMessage = "El apellido no puede sobrepasar los 50 caracteres")]
+        [Required(ErrorMessage = "REQUIRED")]
+        [StringLength(50, ErrorMessage = "INVALID_LENGTH")]
         public required string LastName { get; set; }
-        [Required]
-        [StringLength(100, ErrorMessage = "El Email no puede sobrepasar los 100 caracteres")]
-        [EmailAddress]
+        [Required(ErrorMessage = "REQUIRED")]
+        [StringLength(100, ErrorMessage = "INVALID_LENGTH")]
+        [EmailAddress(ErrorMessage = "INVALID_EMAIL")]
         public required string Email { get; set; }
-        [Required]
-        [StringLength(20, ErrorMessage = "El numero de telefono no puede superar los 20 caracteres")]
-        [Phone(ErrorMessage = "Formato de número de teléfono inválido.")]
+        [Required(ErrorMessage = "REQUIRED")]
         public required string PhoneNumber { get; set; }
     }
 }
