@@ -15,6 +15,21 @@ namespace Booking.Core.Entities
         {
             Name = name;
         }
+
+        public void AddPermission(int permissionId)
+        {
+            if (RolePermissions.Any(rp => rp.PermissionId == permissionId)) return;
+            RolePermissions.Add(new RolePermission(Id, permissionId));
+        }
+
+        public void RemovePermission(int permissionId)
+        {
+            var permission = RolePermissions.FirstOrDefault(rp => rp.PermissionId == permissionId);
+            if (permission != null)
+            {
+                RolePermissions.Remove(permission);
+            }
+        }
         public Role() { }
     }
 }
