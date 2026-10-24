@@ -1,0 +1,299 @@
+@api_HostAddress = http://localhost:5268
+
+###
+
+# Locations
+
+# GET all locations
+GET {{api_HostAddress}}/api/Location
+
+###
+
+# GET location by ID
+GET {{api_HostAddress}}/api/Location/1
+
+###
+
+# POST a new location
+POST {{api_HostAddress}}/api/Location
+Content-Type: application/json
+
+{
+  "name": "Sala de Conferencias Principal",
+  "address": "123 Calle ciudad sandino, Ciudad Gótica",
+  "description": "Ubicación central con múltiples salas."
+}
+
+###
+
+# PUT to update a location
+PUT {{api_HostAddress}}/api/Location/1
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "Sala de Conferencias Norte",
+  "address": "456 Avenida Siempre Viva, Ciudad Gótica",
+  "description": "Ubicación renovada en el ala norte."
+}
+
+###
+
+# DELETE a location
+DELETE {{api_HostAddress}}/api/Location/1
+
+###
+
+# Clients
+
+# GET all clients
+GET {{api_HostAddress}}/api/Client
+
+###
+
+# GET client by ID
+GET {{api_HostAddress}}/api/Client/1
+
+###
+
+# POST a new client
+POST {{api_HostAddress}}/api/Client
+Content-Type: application/json
+
+{
+  "firstName": "Juan",
+  "lastName": "Pérez",
+  "email": "juan.perez@example.com",
+  "phoneNumber": "123-456-7890"
+}
+
+###
+
+# PUT to update a client
+PUT {{api_HostAddress}}/api/Client/1
+Content-Type: application/json
+
+{
+  "id": 1,
+  "firstName": "Juan Alberto",
+  "lastName": "Pérez Gómez",
+  "email": "juan.perez.new@example.com",
+  "phoneNumber": "098-765-4321"
+}
+
+###
+
+# DELETE a client
+DELETE {{api_HostAddress}}/api/Client/1
+
+###
+
+# Rooms
+
+# GET all rooms
+GET {{api_HostAddress}}/api/Room
+
+###
+
+# GET room by ID
+GET {{api_HostAddress}}/api/Room/1
+
+###
+
+# POST a new room
+POST {{api_HostAddress}}/api/Room
+Content-Type: application/json
+
+{
+  "name": "Sala A1",
+  "capacity": 10,
+  "locatonId": 1
+}
+
+###
+
+# PUT to update a room
+PUT {{api_HostAddress}}/api/Room/1
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "Sala A1-Plus",
+  "capacity": 12,
+  "locatonId": 1
+}
+
+###
+
+# DELETE a room
+DELETE {{api_HostAddress}}/api/Room/1
+
+###
+
+# Users
+
+# GET all users
+GET {{api_HostAddress}}/api/User
+
+###
+
+# GET user by ID
+GET {{api_HostAddress}}/api/User/1
+
+###
+
+# POST a new user
+POST {{api_HostAddress}}/api/User
+Content-Type: application/json
+
+{
+  "firstName": "Ana",
+  "lastName": "García",
+  "email": "ana.garcia@example.com",
+  "roleId": 1
+}
+
+###
+
+# PUT to update a user
+PUT {{api_HostAddress}}/api/User/1
+Content-Type: application/json
+
+{
+  "id": 1,
+  "firstName": "Ana María",
+  "lastName": "García López",
+  "email": "ana.garcia.new@example.com",
+  "roleId": 1
+}
+
+###
+
+# DELETE a user
+DELETE {{api_HostAddress}}/api/User/1
+
+###
+
+# Roles
+
+# GET all roles
+GET {{api_HostAddress}}/api/Role
+
+###
+
+# GET role by ID
+GET {{api_HostAddress}}/api/Role/1
+
+###
+
+# POST a new role
+POST {{api_HostAddress}}/api/Role
+Content-Type: application/json
+
+{
+  "name": "Administrador"
+}
+
+###
+
+# PUT to update a role
+PUT {{api_HostAddress}}/api/Role/1
+Content-Type: application/json
+
+{
+  "name": "Super Administrador"
+}
+
+###
+
+# DELETE a role
+DELETE {{api_HostAddress}}/api/Role/1
+
+###
+
+# Permissions
+
+# GET all permissions
+GET {{api_HostAddress}}/api/Permission
+
+###
+
+# GET permission by ID
+GET {{api_HostAddress}}/api/Permission/1
+
+###
+
+# POST a new permission
+POST {{api_HostAddress}}/api/Permission
+Content-Type: application/json
+
+{
+  "name": "ReadWrite",
+  "description": "Permiso para leer y escribir datos."
+}
+
+###
+
+# PUT to update a permission
+PUT {{api_HostAddress}}/api/Permission/1
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "FullAccess",
+  "description": "Permiso con acceso total."
+}
+
+###
+
+# DELETE a permission
+DELETE {{api_HostAddress}}/api/Permission/1
+
+###
+
+# Bookings
+
+# GET all bookings
+GET {{api_HostAddress}}/api/Booking
+
+###
+
+# GET booking by ID
+GET {{api_HostAddress}}/api/Booking/1
+
+###
+
+# POST a new booking
+POST {{api_HostAddress}}/api/Booking
+Content-Type: application/json
+
+{
+  "date": "2025-09-15",
+  "startTime": "14:00:00",
+  "endTime": "15:00:00",
+  "roomId": 1,
+  "userId": 1,
+  "clientId": 1
+}
+
+###
+
+# PUT to update a booking
+PUT {{api_HostAddress}}/api/Booking/1
+Content-Type: application/json
+
+
+{
+  "id": 1,                         
+  "date": "2025-07-20",            
+  "startTime": "10:00:00",        
+  "endTime": "11:30:00",    
+  "roomId": 1,
+  "userId": 1,
+  "clientId": 1
+}
+
+###
+
+# DELETE a booking
+DELETE {{api_HostAddress}}/api/Booking/1
