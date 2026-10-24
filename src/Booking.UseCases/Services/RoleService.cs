@@ -17,7 +17,7 @@ namespace Booking.UseCases.Services
 
         public async Task<RoleDto> GetById(int id)
         {
-            var role = await _unitOfWork.Roles.GetById(id) ?? throw new KeyNotFoundException($"Rol con el Id {id} no encontrado");
+            var role = await _unitOfWork.Roles.GetById(id) ?? throw new DomainException("ROLE_NOT_FOUND");
             return new RoleDto
             {
                 Id = role.Id,
@@ -30,7 +30,9 @@ namespace Booking.UseCases.Services
             var existRole = await _unitOfWork.Roles.GetByName(roleInsertDto.Name);
             if (existRole != null)
             {
-                throw new InvalidOperationException($"Ya existe un Rol con el nombre {roleInsertDto.Name}.");
+                throw new DomainException(
+                    "ROLE_NAME_ALREADY_EXISTS",
+                    target: "name");
             }
             var role = new Core.Entities.Role
             {
@@ -49,7 +51,7 @@ namespace Booking.UseCases.Services
 
         public async Task<bool> Update(RoleUpdateDto roleUpdateDto)
         {
-            var existRole = await _unitOfWork.Roles.GetById(roleUpdateDto.Id) ?? throw new InvalidOperationException($"No se encontro un Rol con el Id:{roleUpdateDto.Id}.");
+            var existRole = await _unitOfWork.Roles.GetById(roleUpdateDto.Id) ?? throw new DomainException("ROLE_NOT_FOUND");
 
             existRole.Name = roleUpdateDto.Name;
             _unitOfWork.Roles.Update(existRole);
@@ -59,7 +61,7 @@ namespace Booking.UseCases.Services
 
         public async Task<bool> Delete(int id)
         {
-            var roleToDelete = await _unitOfWork.Roles.GetById(id) ?? throw new InvalidOperationException($"No se encontro un Rol con el Id:{id}.");
+            var roleToDelete = await _unitOfWork.Roles.GetById(id) ?? throw new DomainException("ROLE_NOT_FOUND");
 
             _unitOfWork.Roles.Delete(roleToDelete);
             var rowsAffected = await _unitOfWork.Complete();

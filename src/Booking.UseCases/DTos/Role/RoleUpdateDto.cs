@@ -2,10 +2,11 @@
 {
     public class RoleUpdateDto
     {
-        [Required(ErrorMessage = "El Id del Rol es requerido para realizar la actualizacion.")]
+        [Required(ErrorMessage = "REQUIRED")]
         public int Id { get; set; }
-        [Required]
-        [StringLength(20, ErrorMessage = "El nombre del Rol no puede sobrepasar los 20 caracteres.")]
+
+        [Required(ErrorMessage = "REQUIRED")]
+        [StringLength(20, ErrorMessage = "INVALID_LENGTH")]
         public required string Name { get; set; }
     }
 }

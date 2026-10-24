@@ -2,18 +2,22 @@ namespace Booking.UseCases.DTOs.User
 {
     public class UserUpdateDto
     {
-        [Required(ErrorMessage = "El Id del Usuario es requerido para realizar la actualizacion.")]
+        [Required(ErrorMessage = "REQUIRED")]
         public required int Id { get; set; }
-        [Required]
-        [MaxLength(50, ErrorMessage = "El Nombre no puede exceder los 50 caracteres.")]
+
+        [Required(ErrorMessage = "REQUIRED")]
+        [StringLength(50, ErrorMessage = "INVALID_LENGTH")]
         public required string FirstName { get; set; }
-        [Required]
-        [MaxLength(50, ErrorMessage = "El Apellido no puede exceder los 50 caracteres.")]
+
+        [Required(ErrorMessage = "REQUIRED")]
+        [StringLength(50, ErrorMessage = "INVALID_LENGTH")]
         public required string LastName { get; set; }
-        [Required]
-        [MaxLength(100, ErrorMessage = "El Email no puede superar los 100 caracteres.")]
+
+        [Required(ErrorMessage = "REQUIRED")]
+        [StringLength(100, ErrorMessage = "INVALID_LENGTH")]
         public required string Email { get; set; }
-        [Required(ErrorMessage = "El ID del Rol es obligatorio.")]
+
+        [Required(ErrorMessage = "REQUIRED")]
         public required int RoleId { get; set; }
     }
 }

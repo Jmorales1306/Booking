@@ -2,8 +2,8 @@
 {
     public class PermissionInsertDto
     {
-        [Required(ErrorMessage = "Se debe agregar un nombre al Permiso.")]
-        [StringLength(20, ErrorMessage = "El nombre no puede exceder los 20 caracteres.")]
+        [Required(ErrorMessage = "REQUIRED")]
+        [StringLength(20, ErrorMessage = "INVALID_LENGTH")]
         public required string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
     }

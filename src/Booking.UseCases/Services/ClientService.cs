@@ -20,9 +20,12 @@ namespace Booking.UseCases.Services
             })];
         }
 
+
+        private static readonly System.Text.RegularExpressions.Regex PhoneRegex = new(@"^\+?[1-9]\d{6,19}$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
         public async Task<ClientDto> GetById(int id)
         {
-            var client = await _unitOfWork.Clients.GetById(id) ?? throw new KeyNotFoundException($"Cliente con el Id {id} no encontrado");
+            var client = await _unitOfWork.Clients.GetById(id) ?? throw new DomainException("CLIENT_NOT_FOUND");
             return new ClientDto
             {
                 Id = client.Id,
@@ -38,14 +41,28 @@ namespace Booking.UseCases.Services
             var existEmail = await _unitOfWork.Clients.GetByEmail(clientInsertDto.Email);
             if (existEmail != null)
             {
-                throw new InvalidOperationException($"Ya existe un cliente con el correo electrónico '{clientInsertDto.Email}'.");
+                throw new DomainException(
+                    "CLIENT_EMAIL_ALREADY_EXISTS",
+                    target: "email");
             }
             if (!string.IsNullOrWhiteSpace(clientInsertDto.PhoneNumber))
             {
+                if (clientInsertDto.PhoneNumber.Length > 20)
+                {
+                    throw new DomainException("INVALID_PHONE_LENGTH", target: "phoneNumber");
+                }
+
+                if (!PhoneRegex.IsMatch(clientInsertDto.PhoneNumber))
+                {
+                    throw new DomainException("INVALID_PHONE_FORMAT", target: "phoneNumber");
+                }
+
                 var existClientByPhone = await _unitOfWork.Clients.GetByPhoneNumber(clientInsertDto.PhoneNumber);
                 if (existClientByPhone != null)
                 {
-                    throw new InvalidOperationException($"Ya existe un cliente con el número de teléfono '{clientInsertDto.PhoneNumber}'.");
+                    throw new DomainException(
+                        "CLIENT_PHONE_ALREADY_EXISTS",
+                        target: "phoneNumber");
                 }
             }
 
@@ -75,20 +92,34 @@ namespace Booking.UseCases.Services
             var existClient = await _unitOfWork.Clients.GetById(clientUpdateDto.Id);
             if (existClient == null)
             {
-                return false;
+                throw new DomainException("CLIENT_NOT_FOUND");
             }
             var clientWithSameEmail = await _unitOfWork.Clients.GetByEmail(clientUpdateDto.Email);
             if (clientWithSameEmail != null && clientWithSameEmail.Id != clientUpdateDto.Id)
             {
-                throw new InvalidOperationException($"Ya existe otro cliente con el correo electrónico '{clientUpdateDto.Email}'.");
+                throw new DomainException(
+                    "CLIENT_EMAIL_ALREADY_EXISTS",
+                    target: "email");
             }
 
             if (!string.IsNullOrWhiteSpace(clientUpdateDto.PhoneNumber))
             {
+                if (clientUpdateDto.PhoneNumber.Length > 20)
+                {
+                    throw new DomainException("INVALID_PHONE_LENGTH", target: "phoneNumber");
+                }
+
+                if (!PhoneRegex.IsMatch(clientUpdateDto.PhoneNumber))
+                {
+                    throw new DomainException("INVALID_PHONE_FORMAT", target: "phoneNumber");
+                }
+
                 var clientWithSamePhone = await _unitOfWork.Clients.GetByPhoneNumber(clientUpdateDto.PhoneNumber);
                 if (clientWithSamePhone != null && clientWithSamePhone.Id != clientUpdateDto.Id)
                 {
-                    throw new InvalidOperationException($"Ya existe otro cliente con el número de teléfono '{clientUpdateDto.PhoneNumber}'.");
+                    throw new DomainException(
+                        "CLIENT_PHONE_ALREADY_EXISTS",
+                        target: "phoneNumber");
                 }
             }
 
@@ -107,7 +138,7 @@ namespace Booking.UseCases.Services
             var clientToDelete = await _unitOfWork.Clients.GetById(id);
             if (clientToDelete == null)
             {
-                return false;
+                throw new DomainException("CLIENT_NOT_FOUND");
             }
 
             _unitOfWork.Clients.Delete(clientToDelete);

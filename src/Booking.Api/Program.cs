@@ -38,6 +38,24 @@ builder.Services.AddScoped<IBookingService, BookingService>();
 //DI Controllers
 builder.Services.AddControllers();
 
+// Adds services for using Problem Details format
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Instance =
+            $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path}";
+
+        context.ProblemDetails.Extensions.TryAdd("requestId", context.HttpContext.TraceIdentifier);
+
+        Activity? activity = context.HttpContext.Features.Get<IHttpActivityFeature>()?.Activity;
+        context.ProblemDetails.Extensions.TryAdd("traceId", activity?.Id);
+    };
+});
+
+// Register global exception handler that returns ProblemDetails
+builder.Services.AddTransient<ProblemDetailsFactory, CustomProblemDetailsFactory>();
+
 // Configure routing to use lowercase URLs
 builder.Services.AddRouting(options =>
 {
@@ -55,6 +73,15 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseRouting();
+
+// Converts unhandled exceptions into Problem Details responses
+app.UseExceptionHandler();
+
+// Returns the Problem Details response for (empty) non-successful responses
+app.UseStatusCodePages();
+
+// Global middleware for handling exceptions
+app.UseMiddleware<ApiExceptionHandlingMiddleware>();
 
 app.UseAuthorization();
 

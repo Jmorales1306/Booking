@@ -2,13 +2,15 @@ namespace Booking.UseCases.DTOs.Room
 {
     public class RoomInsertDto
     {
-        [Required]
-        [StringLength(50, ErrorMessage = "El nombre no puede exceder los 50 caracteres")]
+        [Required(ErrorMessage = "REQUIRED")]
+        [StringLength(50, ErrorMessage = "INVALID_LENGTH")]
         public required string Name { get; set; } = string.Empty;
-        [Required]
-        [Range(1, 1000, ErrorMessage = "La capacidad de la sala debe ser un numero mayor de 0")]
+
+        [Required(ErrorMessage = "REQUIRED")]
+        [Range(1, 1000, ErrorMessage = "INVALID_RANGE")]
         public required int Capacity { get; set; }
-        [Required(ErrorMessage = "El ID de la Ubicación es obligatorio.")]
+
+        [Required(ErrorMessage = "REQUIRED")]
         public required int LocatonId { get; set; }
     }
 }

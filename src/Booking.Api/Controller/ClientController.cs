@@ -18,111 +18,74 @@ namespace Booking.Api.Controller
 
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(ClientDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetById(int id)
         {
             var client = await _clientService.GetById(id);
-            if (client == null)
-            {
-                return NotFound(new { message = $"El Client con el ID:{id} no fue encontrado " });
-            }
-            try
-            {
-                return Ok(client);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+            return Ok(client);
         }
 
         [HttpPost]
         [ProducesResponseType(typeof(ClientDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Add([FromBody] ClientInsertDto clientInsertDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
-            try
-            {
-                var client = await _clientService.Add(clientInsertDto);
-                return CreatedAtAction(nameof(GetById), new { id = client.Id }, client);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = "Operacion invalida", ProblemDetails = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+
+            var client = await _clientService.Add(clientInsertDto);
+            return CreatedAtAction(nameof(GetById), new { id = client.Id }, client);
         }
 
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Update(int id, [FromBody] ClientUpdateDto clientUpdateDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
+
             if (id != clientUpdateDto.Id)
             {
-                return BadRequest(new { message = "El ID de la ruta no coincide con el ID del cliente en el cuerpo de la solicitud." });
+                throw new DomainException(
+                    "ROUTE_BODY_ID_MISMATCH",
+                    target: "id");
             }
-            try
+
+            var clientUpdated = await _clientService.Update(clientUpdateDto);
+            if (!clientUpdated)
             {
-                var clientUpdate = await _clientService.Update(clientUpdateDto);
-                if (!clientUpdate)
-                {
-                    return BadRequest(new
-                    {
-                        message = $"No se encontró un cliente con el ID {id} para actualizar."
-                    });
-                }
-                return NoContent();
+                throw new DomainException(
+                    "CLIENT_NOT_FOUND",
+                    target: "id");
             }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            var clientDeleted = await _clientService.Delete(id);
+            if (!clientDeleted)
             {
-                var clientDelete = await _clientService.Delete(id);
-                if (!clientDelete)
-                {
-                    return NotFound(new { message = $"No se encontro un cliente con el ID:{id} para eliminar." });
-                }
-                return NoContent();
+                throw new DomainException(
+                    "CLIENT_NOT_FOUND",
+                    target: "id");
             }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado.", ProblemDetails = ex.Message });
-            }
+
+            return NoContent();
         }
     }
-
 }

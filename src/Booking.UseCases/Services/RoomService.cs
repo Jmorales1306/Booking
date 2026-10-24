@@ -18,9 +18,14 @@ namespace Booking.UseCases.Services
             })];
         }
 
-        public async Task<RoomDTo> GetById(int id)
+        public async Task<RoomDTo?> GetById(int id)
         {
-            var room = await _unitOfWork.Rooms.GetById(id) ?? throw new KeyNotFoundException($"Room con el Id:{id} no encontrado");
+            var room = await _unitOfWork.Rooms.GetById(id);
+            if (room is null)
+            {
+                throw new DomainException("ROOM_NOT_FOUND");
+            }
+
             return new RoomDTo
             {
                 Id = room.Id,
@@ -35,13 +40,17 @@ namespace Booking.UseCases.Services
             var existRoom = await _unitOfWork.Rooms.GetByName(roomInsertDto.Name);
             if (existRoom != null)
             {
-                throw new InvalidOperationException($"Ya existe un Rol con el nombre {roomInsertDto.Name}.");
+                throw new DomainException(
+                    "ROOM_NAME_ALREADY_EXISTS",
+                    target: "name");
             }
 
             var existingLocation = await _unitOfWork.Locations.GetById(roomInsertDto.LocatonId);
             if (existingLocation == null)
             {
-                throw new KeyNotFoundException($"La Ubicación con el ID '{roomInsertDto.LocatonId}' no existe.");
+                throw new DomainException(
+                    "LOCATION_NOT_FOUND",
+                    target: "locationId");
             }
 
             var room = new Core.Entities.Room
@@ -65,7 +74,11 @@ namespace Booking.UseCases.Services
         }
         public async Task<bool> Update(RoomUpdateDto roomUpdateDto)
         {
-            var existRoom = await _unitOfWork.Rooms.GetById(roomUpdateDto.Id) ?? throw new InvalidOperationException($"No se encontro una Sala con el Id:{roomUpdateDto.Id}.");
+            var existRoom = await _unitOfWork.Rooms.GetById(roomUpdateDto.Id);
+            if (existRoom is null)
+            {
+                return false;
+            }
 
             existRoom.Name = roomUpdateDto.Name;
             existRoom.Capacity = roomUpdateDto.Capacity;
@@ -78,7 +91,11 @@ namespace Booking.UseCases.Services
         }
         public async Task<bool> Delete(int id)
         {
-            var roomToDelete = await _unitOfWork.Rooms.GetById(id) ?? throw new InvalidOperationException($"No se encontro una Sala con el Id:{id}.");
+            var roomToDelete = await _unitOfWork.Rooms.GetById(id);
+            if (roomToDelete is null)
+            {
+                return false;
+            }
 
             _unitOfWork.Rooms.Delete(roomToDelete);
             var rowsAffected = await _unitOfWork.Complete();

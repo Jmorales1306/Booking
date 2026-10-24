@@ -1,6 +1,7 @@
+using Booking.Infrastructure.ProblemDetail;
 using Booking.UseCases.DTOs.User;
 
-namespace Api.Controller
+namespace Booking.Api.Controller
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -18,109 +19,77 @@ namespace Api.Controller
 
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetById(int id)
         {
-            var User = await _userService.GetById(id);
-            if (User == null)
-            {
-                return NotFound(new { message = $"El Usuario con el ID:{id} no fue encontrado " });
-            }
-            try
-            {
-                return Ok(User);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+            var user = await _userService.GetById(id);
+
+            return Ok(user);
         }
 
         [HttpPost]
-        [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Add([FromBody] UserInsertDto userInsertDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
-            try
-            {
-                var user = await _userService.Add(userInsertDto);
-                return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = "Operacion invalida", ProblemDetails = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+
+            var user = await _userService.Add(userInsertDto);
+            return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
         }
+
+
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Update(int id, [FromBody] UserUpdateDto userUpdateDto)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
+
             if (id != userUpdateDto.Id)
             {
-                return BadRequest(new { message = "El ID de la ruta no coincide con el ID del Usuario en el cuerpo de la solicitud." });
+                throw new DomainException(
+                    "ROUTE_BODY_ID_MISMATCH",
+                    target: "id");
             }
-            try
+
+            var userUpdated = await _userService.Update(userUpdateDto);
+
+            if (!userUpdated)
             {
-                var userUpdate = await _userService.Update(userUpdateDto);
-                if (!userUpdate)
-                {
-                    return BadRequest(new
-                    {
-                        message = $"No se encontró un Usuario con el ID {id} para actualizar."
-                    });
-                }
-                return NoContent();
+                throw new DomainException(
+                    "USER_NOT_FOUND",
+                    target: "id");
             }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            var userDeleted = await _userService.Delete(id);
+
+            if (!userDeleted)
             {
-                var usertDelete = await _userService.Delete(id);
-                if (!usertDelete)
-                {
-                    return NotFound(new { message = $"No se encontro un Usuario con el ID:{id} para eliminar." });
-                }
-                return NoContent();
+                throw new DomainException(
+                    "USER_NOT_FOUND",
+                    target: "id");
             }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado.", ProblemDetails = ex.Message });
-            }
+
+            return NoContent();
         }
 
     }

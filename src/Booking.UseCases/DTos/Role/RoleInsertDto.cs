@@ -2,8 +2,8 @@
 {
     public class RoleInsertDto
     {
-        [Required]
-        [StringLength(20, ErrorMessage = "El nombre del Rol no puede sobrepasar los 20 caracteres.")]
+        [Required(ErrorMessage = "REQUIRED")]
+        [StringLength(20, ErrorMessage = "INVALID_LENGTH")]
         public required string Name { get; set; }
     }
 }

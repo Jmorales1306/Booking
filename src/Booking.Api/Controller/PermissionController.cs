@@ -18,107 +18,74 @@ namespace Booking.Api.Controller
 
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(PermissionDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetById(int id)
         {
             var permission = await _permissionService.GetById(id);
-            if (permission == null)
-            {
-                return NotFound(new { message = $"El Permiso con el ID:{id} no fue encontado" });
-            }
-            try
-            {
-                return Ok(permission);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+            return Ok(permission);
         }
 
         [HttpPost]
         [ProducesResponseType(typeof(PermissionDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Add([FromBody] PermissionInsertDto permissionInsertDTo)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
-            try
-            {
-                var permission = await _permissionService.Add(permissionInsertDTo);
-                return CreatedAtAction(nameof(GetById), new { id = permission.Id }, permission);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = "Operacion invalida. ", ProblemDetails = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+
+            var permission = await _permissionService.Add(permissionInsertDTo);
+            return CreatedAtAction(nameof(GetById), new { id = permission.Id }, permission);
         }
 
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Update(int id, [FromBody] PermissionUpdateDto permissionUpdateDTo)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return ValidationProblem(ModelState);
             }
+
             if (id != permissionUpdateDTo.Id)
             {
-                return BadRequest(new { message = "El ID de la ruta no coincide con el ID del Permiso en el cuerpo de la solicitud." });
+                throw new DomainException(
+                    "ROUTE_BODY_ID_MISMATCH",
+                    target: "id");
+            }
 
-            }
-            try
+            var permissionUpdated = await _permissionService.Update(permissionUpdateDTo);
+            if (!permissionUpdated)
             {
-                var permissionUpdate = await _permissionService.Update(permissionUpdateDTo);
-                if (!permissionUpdate)
-                {
-                    return BadRequest(new { message = $"No se encontró un Permiso con el ID {id} para actualizar." });
-                }
-                return NoContent();
+                throw new DomainException(
+                    "PERMISSION_NOT_FOUND",
+                    target: "id");
             }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
+
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            var permissionDeleted = await _permissionService.Delete(id);
+            if (!permissionDeleted)
             {
-                var permissionToDelete = await _permissionService.Delete(id);
-                if (!permissionToDelete)
-                {
-                    return NotFound(new { message = $"No se encontro un Permiso con el ID:{id} para eliminar" });
-                }
-                return NoContent();
+                throw new DomainException(
+                    "PERMISSION_NOT_FOUND",
+                    target: "id");
             }
-            catch (InvalidDataException ex)
-            {
-                return BadRequest(new { message = ex });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Opss. Ocurrio un error inesperado", ProblemDetails = ex.Message });
-            }
-        }
 
+            return NoContent();
+        }
     }
 }
